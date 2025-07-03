@@ -21,10 +21,29 @@ app.post("/signup",async(req,res) => {
     res.send("User Added Successfully")
     }
     catch(err){
-        res.send(err.message)
+        res.status(400).send("ERROR :"+err.message)
     }
 })
 
+app.post("/login",async(req,res) => {
+    try{
+        const {emailId,password} = req.body;
+        const user = await User.findOne({emailId:emailId});
+        if(!user){
+            throw new Error("Invalid Credentials")
+        }
+        const isMatch = await bcrypt.compare(password,user.password);
+        if(isMatch){
+            res.send("Login Success");
+            
+        }else{
+        throw new Error("Invalid Credentials")
+        }
+    }
+    catch(err){
+        res.status(400).send("ERROR :"+err.message)
+    }
+})
 app.get("/feed",async(req,res) => {
     try{
     const user = await User.find({});
