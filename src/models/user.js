@@ -62,6 +62,8 @@ const userSchema = mongoose.Schema({
 },
 {timestamps:true});
 
+
+userSchema.index({firstName:1,lastName:1})
 userSchema.methods.creatingJWTToken = async function(){
     const user = this;
 
