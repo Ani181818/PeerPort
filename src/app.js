@@ -4,7 +4,14 @@ const app = express();
 const User = require("./models/user")
 const {validateSignUp} = require("./utils/validation")
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser")
+const jwt = require("jsonwebtoken");
+const {userAuth} = require("./middlewares/auth")
+
+
 app.use(express.json());
+app.use(cookieParser());
+
 
 app.post("/signup",async(req,res) => {
 
@@ -32,8 +39,12 @@ app.post("/login",async(req,res) => {
         if(!user){
             throw new Error("Invalid Credentials")
         }
-        const isMatch = await bcrypt.compare(password,user.password);
+        const isMatch = await user.passwordValidator(password);
         if(isMatch){
+            //Create a JWT Token
+            const token = await user.creatingJWTToken();
+            //Add the token to cookie and send the response back to user
+            res.cookie("token",token,{expires: new Date(Date.now()+8*3600000)})
             res.send("Login Success");
             
         }else{
@@ -44,61 +55,26 @@ app.post("/login",async(req,res) => {
         res.status(400).send("ERROR :"+err.message)
     }
 })
-app.get("/feed",async(req,res) => {
-    try{
-    const user = await User.find({});
-    res.send(user);
-    }
-    catch(err){
-        res.send.status(404).send("User Not Fiund");
-    }
-})
 
-app.get("/user",async(req,res) => {
-    const userName = req.body.firstName;
-    try{
-        const user = await User.find({firstName:userName})
-        res.send(user);
-    }
-    catch(err){
-        res.send.status(404).send("User Not Fiund");
-    }
-})
-
-app.delete("/user",async(req,res) => {
-    const userId = req.body.userId;
+app.get("/profile",userAuth,async(req,res) => {
     
     try{
-        const user = await User.findByIdAndDelete(userId)
-        res.send("User Deleted Successfully")
-    }
-    catch(err){
-        res.send.status(404).send("User Not Fiund");
-    }
-})
+        
+        const user = req.user;
 
-app.patch("/user/:userId",async(req,res) => {
-    const userId = req.params?.userId;
-    const user = req.body;
-
-    try{
-        const ALLOWED_UPDATED = ["photoURL","about","gender","age","skills"];
-        const isUpdateAllowed = Object.keys(user).every((k) => ALLOWED_UPDATED.includes(k));
-        if(!isUpdateAllowed){
-            throw new Error("Update is Not Allowed")
-        }
-        if(user?.skills.length > 10){
-            throw new Error("Skills Cannot be More Than 10")
-        }
-        await User.findByIdAndUpdate(userId,user,{runValidators:true});
-        res.send("User Updated Successfully");
+        res.send(user)
 
     }
     catch(err){
-        res.status(404).send("Update Failed:"+err.messaage);
+        res.status(400).send("ERROR :"+err.message)
     }
-    
 })
+
+app.post("/sendingConnectionRequest",userAuth,async(req,res) => {
+    res.send(req.user.firstName+" sent a request")
+})
+
+ 
 
 connectDB().then(()=>{
     console.log("Connected to MongoDB")
