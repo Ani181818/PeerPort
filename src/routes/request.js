@@ -37,8 +37,7 @@ requestRouter.post("/request/send/:status/:userId",userAuth,async(req,res) => {
        
         const data = await connectionRequest.save();
 
-        res.json({message:`${req.user.firstName}, has ${status} ${toUser.firstName}`,
-        data:data})
+        res.send(data);
 
     }
     catch(err){
@@ -70,9 +69,7 @@ requestRouter.post("/request/review/:status/:requestId",userAuth,async(req,res) 
 
         const data = await connectionValid.save();
 
-        res.json({message:`${loggedInUser.firstName}, has ${status}`,
-            data:data}
-        )
+        res.send(data);
 
 
     }

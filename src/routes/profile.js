@@ -35,8 +35,7 @@ profileRouter.patch("/profile/edit",userAuth,async(req,res) => {
 
         await existingUser.save();
 
-        res.json({message:`${existingUser.firstName}, Your profile Updated successfully`,
-        data : updatedUser})
+        res.send(existingUser);
 
 
     }
@@ -59,10 +58,8 @@ profileRouter.patch("/profile/password",userAuth,async(req,res)=> {
 
         await loggedInUser.save();
 
-        res.json({message :`${loggedInUser.firstName}, Your PassWord Has been Updated Successfully`,
-            data: updatedUser
-        }
-        )
+        res.send(loggedInUser);
+        
 
     }
     catch(err){

@@ -16,8 +16,7 @@ userRouter.get("/user/requests/received",userAuth,async(req,res)=> {
 
         
 
-        res.json({message:"Data Fetched Successfully",
-            data:connectionRequest})
+        res.send(connectionRequest);
     }
     catch(err){
         res.status(400).send("Error :"+err.message)
@@ -44,7 +43,7 @@ userRouter.get("/user/connections",userAuth,async(req,res)=>{
             return row.fromUserId;
         })
 
-        res.json({data});
+        res.send(data);
 
     }
     catch(err){
@@ -78,7 +77,7 @@ userRouter.get("/user/feed",userAuth,async(req,res)=> {
                 {_id:{$nin:Array.from(hideUsersFromFeed)}},
                 {_id:{$ne:loggedInUser._id}}
             ]
-         }).select("firstName lastName age gender about skills").skip(skip).limit(limit)
+         }).select("firstName lastName age gender about skills photoURL").skip(skip).limit(limit)
 
          res.send(users);
     }
