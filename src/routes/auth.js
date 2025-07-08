@@ -15,6 +15,9 @@ authRouter.post("/signup",async(req,res) => {
     const passwdHash = await bcrypt.hash(password,10);
     //Now Save it
     const user = new User({firstName,lastName,emailId,password:passwdHash});
+    const token = await user.creatingJWTToken();
+    //Add the token to cookie and send the response back to user
+    res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) });
     await user.save();
     res.send(user);
     }
