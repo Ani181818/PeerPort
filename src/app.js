@@ -1,9 +1,10 @@
+require('dotenv').config();
+
 const express = require("express");
 const connectDB = require("./config/database")
 const app = express();
 const cookieParser = require("cookie-parser")
 const cors = require("cors")
-require("dotenv").config();
  
 app.use(cors({
     origin:"http://localhost:5173",
@@ -27,7 +28,7 @@ app.use("/",userRouter);
 
 connectDB().then(()=>{
     console.log("Connected to MongoDB")
-    app.listen(process.env.PORT,()=> {
+    app.listen(7777,()=> {
     console.log("Server is running on port 7777");
 });
 }).catch((err)=>{
