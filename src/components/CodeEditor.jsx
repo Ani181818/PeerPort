@@ -1,186 +1,178 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { createSocketConnection } from "../utils/socket";
+import { useSelector } from "react-redux";
+import axios from "axios";
+import { BASE_URL } from "../utils/constants";
+import CodeEditor from "./CodeEditor";
 
-const CodeEditor = ({ userId, targetUserId, socket }) => {
-  const [code, setCode] = useState("// Welcome to collaborative coding!\n// Start typing your code here...\n\n");
-  const [language, setLanguage] = useState("javascript");
-  const textareaRef = useRef(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [collaboratorCursor, setCollaboratorCursor] = useState(null);
+const Chat = () => {
+  const { targetUserId } = useParams();
+  const [messages, setMessages] = useState([]);
+  const [newMsg, setNewMsg] = useState("");
+  const [showCodeEditor, setShowCodeEditor] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const user = useSelector((store) => store.user);
+  const userId = user?._id;
+  const scrollRef = useRef(null);
+
+  const fetchChatMessages = async () => {
+    const chat = await axios.get(BASE_URL + "/chat/" + targetUserId, {
+      withCredentials: true,
+    });
+
+    const chatMessages = chat?.data?.messages.map((msg) => {
+      const { senderId, text } = msg;
+      return {
+        firstName: senderId?.firstName,
+        lastName: senderId?.lastName,
+        text,
+      };
+    });
+
+    setMessages(chatMessages);
+  };
 
   useEffect(() => {
-    if (!socket) return;
+    fetchChatMessages();
+  }, []);
 
-    // Listen for code changes from other user
-    socket.on("codeChanged", ({ newCode, cursorPosition }) => {
-      if (!isTyping) {
-        setCode(newCode);
-        setCollaboratorCursor(cursorPosition);
-      }
+  useEffect(() => {
+    if (!user) return;
+    const socketConnection = createSocketConnection();
+    setSocket(socketConnection);
+
+    socketConnection.emit("joinChat", { userId, targetUserId });
+
+    socketConnection.on("messageReceived", ({ firstName, lastName, text }) => {
+      setMessages((messages) => [...messages, { firstName, lastName, text }]);
     });
 
-    // Listen for language changes
-    socket.on("languageChanged", ({ newLanguage }) => {
-      setLanguage(newLanguage);
-    });
-
-    // Listen for cursor position updates
-    socket.on("cursorMoved", ({ cursorPosition }) => {
-      setCollaboratorCursor(cursorPosition);
+    // Listen for code editor toggle from other user
+    socketConnection.on("codeEditorToggled", ({ isVisible }) => {
+      setShowCodeEditor(isVisible);
     });
 
     return () => {
-      socket.off("codeChanged");
-      socket.off("languageChanged");
-      socket.off("cursorMoved");
+      socketConnection.disconnect();
     };
-  }, [socket, isTyping]);
+  }, [userId, targetUserId]);
 
-  const handleCodeChange = (e) => {
-    const newCode = e.target.value;
-    const cursorPosition = e.target.selectionStart;
-    
-    setCode(newCode);
-    setIsTyping(true);
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    // Emit code change to other user
-    socket?.emit("codeChange", {
+  const sendMessage = () => {
+    if (!newMsg.trim()) return;
+
+    socket?.emit("sendMessage", {
+      firstName: user.firstName,
+      lastName: user.lastName,
       userId,
       targetUserId,
-      code: newCode,
-      cursorPosition
+      text: newMsg,
     });
 
-    // Reset typing flag after a short delay
-    setTimeout(() => setIsTyping(false), 100);
+    setNewMsg("");
   };
 
-  const handleLanguageChange = (e) => {
-    const newLanguage = e.target.value;
-    setLanguage(newLanguage);
+  const toggleCodeEditor = () => {
+    const newState = !showCodeEditor;
+    setShowCodeEditor(newState);
     
-    socket?.emit("languageChange", {
+    // Notify other user about code editor toggle
+    socket?.emit("toggleCodeEditor", {
       userId,
       targetUserId,
-      language: newLanguage
-    });
-  };
-
-  const handleCursorMove = (e) => {
-    const cursorPosition = e.target.selectionStart;
-    
-    socket?.emit("cursorMove", {
-      userId,
-      targetUserId,
-      cursorPosition
+      isVisible: newState
     });
   };
 
-  const runCode = () => {
-    // Simple code execution simulation
-    try {
-      if (language === "javascript") {
-        // Create a safe evaluation context
-        const result = eval(code);
-        alert(`Output: ${result}`);
-      } else {
-        alert("Code execution is only supported for JavaScript in this demo");
-      }
-    } catch (error) {
-      alert(`Error: ${error.message}`);
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
-  const clearCode = () => {
-    const newCode = "";
-    setCode(newCode);
-    socket?.emit("codeChange", {
-      userId,
-      targetUserId,
-      code: newCode,
-      cursorPosition: 0
-    });
-  };
-
-  const languages = [
-    { value: "javascript", label: "JavaScript" },
-    { value: "python", label: "Python" },
-    { value: "java", label: "Java" },
-    { value: "cpp", label: "C++" },
-    { value: "html", label: "HTML" },
-    { value: "css", label: "CSS" },
-    { value: "json", label: "JSON" }
-  ];
-
   return (
-    <div className="h-full flex flex-col bg-gray-900 text-white">
-      {/* Code Editor Header */}
-      <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold">Code Editor</h3>
-          <select
-            value={language}
-            onChange={handleLanguageChange}
-            className="bg-gray-700 text-white px-3 py-1 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {languages.map((lang) => (
-              <option key={lang.value} value={lang.value}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="flex gap-2">
+    <div className="max-w-full mx-auto my-10 border border-gray-700 bg-gray-900 text-white rounded-xl shadow-md h-[80vh] flex overflow-hidden">
+      {/* Chat Section */}
+      <div className={`${showCodeEditor ? 'w-1/2' : 'w-full'} flex flex-col transition-all duration-300`}>
+        {/* Chat Header */}
+        <div className="bg-gray-800 px-6 py-4 border-b border-gray-700 flex items-center justify-between">
+          <div className="text-lg font-semibold">Chat Room</div>
           <button
-            onClick={runCode}
-            className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-medium transition"
+            onClick={toggleCodeEditor}
+            className={`px-4 py-2 rounded font-medium transition ${
+              showCodeEditor
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
-            Run
-          </button>
-          <button
-            onClick={clearCode}
-            className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm font-medium transition"
-          >
-            Clear
+            {showCodeEditor ? '✕ Close Editor' : '⚡ Code Editor'}
           </button>
         </div>
-      </div>
 
-      {/* Code Editor Area */}
-      <div className="flex-1 relative">
-        <textarea
-          ref={textareaRef}
-          value={code}
-          onChange={handleCodeChange}
-          onSelect={handleCursorMove}
-          onKeyUp={handleCursorMove}
-          onClick={handleCursorMove}
-          className="w-full h-full p-4 bg-gray-900 text-white font-mono text-sm resize-none outline-none border-none"
-          placeholder="Start coding here..."
-          spellCheck={false}
-        />
-        
-        {/* Collaborator cursor indicator */}
-        {collaboratorCursor !== null && (
-          <div
-            className="absolute w-0.5 h-5 bg-yellow-400 pointer-events-none"
-            style={{
-              left: `${4 + (collaboratorCursor % 80) * 8}px`,
-              top: `${16 + Math.floor(collaboratorCursor / 80) * 20}px`,
-            }}
+        {/* Chat Messages */}
+        <div className="flex-1 px-6 py-4 space-y-4 overflow-y-auto">
+          {messages.map((msg, index) => {
+            const isMe = user.firstName === msg.firstName;
+            return (
+              <div
+                key={index}
+                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[75%] px-4 py-2 rounded-lg text-sm shadow-md ${
+                    isMe
+                      ? "bg-blue-600 text-white rounded-br-none"
+                      : "bg-gray-700 text-white rounded-bl-none"
+                  }`}
+                >
+                  <div className="text-xs font-semibold opacity-80 mb-1">
+                    {msg.firstName} {msg.lastName}
+                  </div>
+                  <div className="whitespace-pre-wrap">{msg.text}</div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={scrollRef} />
+        </div>
+
+        {/* Chat Input */}
+        <div className="px-6 py-4 bg-gray-800 border-t border-gray-700 flex gap-3 items-center">
+          <textarea
+            value={newMsg}
+            onChange={(e) => setNewMsg(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+            className="flex-1 p-2 bg-gray-700 rounded text-white outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-20"
+            rows="1"
           />
-        )}
+          <button
+            onClick={sendMessage}
+            disabled={!newMsg.trim()}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition px-4 py-2 rounded text-white font-medium"
+          >
+            Send
+          </button>
+        </div>
       </div>
 
-      {/* Status Bar */}
-      <div className="bg-gray-800 px-4 py-2 border-t border-gray-700 text-xs text-gray-400 flex justify-between">
-        <span>Language: {language}</span>
-        <span>Lines: {code.split('\n').length}</span>
-        <span>Characters: {code.length}</span>
-      </div>
+      {/* Code Editor Section */}
+      {showCodeEditor && (
+        <div className="w-1/2 border-l border-gray-700">
+          <CodeEditor 
+            userId={userId} 
+            targetUserId={targetUserId} 
+            socket={socket}
+          />
+        </div>
+      )}
     </div>
   );
 };
 
-export default CodeEditor;
+export default Chat;
