@@ -1,4 +1,4 @@
-# DevTinder 💻❤️
+# PeerPort 💻❤️
 
 A Tinder-like application for developers to connect, match, and chat with each other based on skills and interests.
 
