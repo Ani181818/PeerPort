@@ -1,6 +1,7 @@
 # PeerPort 💻❤️
 
-A Tinder-like application for developers to connect, match, and chat with each other based on skills and interests.
+A modern developer networking platform built with React, Redux, and real-time chat functionality. Connect with fellow developers, build meaningful relationships, and grow your professional network in the tech community.
+
 
 ## 🚀 Features
 
