@@ -27,7 +27,7 @@ const initializeSocket = (server) => {
       "sendMessage",
       async ({ firstName, lastName,userId, targetUserId, text }) => {
         try {
-          console.log(firstName + " " + text);
+          
           const roomId = getSecretRoomId(userId, targetUserId);
           let chat = await Chat.findOne({
             participants: { $all: [userId, targetUserId] },
