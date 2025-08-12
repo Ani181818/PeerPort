@@ -52,9 +52,15 @@ authRouter.post("/login",async(req,res) => {
     }
 })
 
-authRouter.post("/logout",async(req,res)=>{
-    res.cookie("token",null,{expires: new Date(Date.now())})
-    res.send(null);
-})
+authRouter.post("/logout", async (req, res) => {
+  res.cookie("token", "", {
+    httpOnly: true,
+    secure: true, // use true in production with HTTPS
+    sameSite: "strict", // or "lax" depending on your needs
+    maxAge: 0,
+  });
+  res.send(null);
+});
+
 
 module.exports = authRouter;
