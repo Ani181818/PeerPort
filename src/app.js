@@ -9,12 +9,14 @@ const http = require("http");
  
 app.use(
   cors({
-    origin: (origin, callback) => {
-      callback(null, origin || "*"); // reflect the request origin
-    },
+    origin: [
+      "http://localhost:5173"
+    ],
     credentials: true,
   })
 );
+
+
 
 app.use(express.json());
 app.use(cookieParser());

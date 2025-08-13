@@ -17,7 +17,13 @@ authRouter.post("/signup",async(req,res) => {
     const user = new User({firstName,lastName,emailId,password:passwdHash});
     const token = await user.creatingJWTToken();
     //Add the token to cookie and send the response back to user
-    res.cookie("token", token, { expires: new Date(Date.now() + 8 * 3600000) });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "None",
+      expires: new Date(Date.now() + 8 * 3600000),
+    });
+
     await user.save();
     res.send(user);
     }
@@ -38,7 +44,13 @@ authRouter.post("/login",async(req,res) => {
             //Create a JWT Token
             const token = await user.creatingJWTToken();
             //Add the token to cookie and send the response back to user
-            res.cookie("token",token,{expires: new Date(Date.now()+8*3600000)})
+            res.cookie("token", token, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "None",
+              expires: new Date(Date.now() + 8 * 3600000),
+            });
+
             res.send(user);
             
         }else{
