@@ -9,9 +9,7 @@ const http = require("http");
  
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173"
-    ],
+    origin: ["http://localhost:5173", "https://peer-port-web.vercel.app/"],
     credentials: true,
   })
 );
